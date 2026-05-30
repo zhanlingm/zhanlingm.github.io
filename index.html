@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lingmin Zhan — Bioinformatics & Deep Learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-primary: #18181B;
+    --color-on-primary: #FFFFFF;
+    --color-secondary: #3F3F46;
+    --color-accent: #2563EB;
+    --color-accent-hover: #1D4ED8;
+    --color-background: #FAFAFA;
+    --color-foreground: #09090B;
+    --color-muted: #E8ECF0;
+    --color-border: #E4E4E7;
+    --color-surface: #FFFFFF;
+    --color-tag-omics: #059669;
+    --color-tag-drug: #7C3AED;
+    --color-tag-dl: #2563EB;
+    --font-heading: 'Archivo', sans-serif;
+    --font-body: 'Space Grotesk', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--color-background);
+    color: var(--color-foreground);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── Canvas Background ── */
+  #particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(250,250,250,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .nav-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+  }
+  .nav-logo {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    letter-spacing: -0.3px;
+  }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+    align-items: center;
+  }
+  .nav-links > li { position: relative; }
+  .nav-links a {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+  }
+  .nav-links a:hover { color: var(--color-accent); }
+
+  /* Nav Dropdown */
+  .nav-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .nav-arrow {
+    font-size: 0.6rem;
+    transition: transform 0.25s;
+    display: inline-block;
+  }
+  .nav-dropdown.open .nav-arrow {
+    transform: rotate(180deg);
+  }
+  .nav-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 170px;
+    list-style: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+  }
+  .nav-dropdown.open .nav-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(8px);
+  }
+  .nav-dropdown-menu li a {
+    display: block;
+    padding: 8px 18px;
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: var(--color-secondary);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .nav-dropdown-menu li a:hover {
+    background: #F4F6F8;
+    color: var(--color-accent);
+  }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  section {
+    padding: 100px 0;
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--color-primary);
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+    margin-top: 4px;
+  }
+
+  /* ── Hero / About ── */
+  #about { padding-top: 140px; }
+
+  .about-grid {
+    display: flex;
+    gap: 56px;
+    align-items: flex-start;
+  }
+  .about-image {
+    flex-shrink: 0;
+    width: 200px;
+    height: 300px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  .about-image img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .about-text h1 {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--color-primary);
+    line-height: 1.15;
+    margin-bottom: 6px;
+  }
+  .about-text .degree {
+    font-size: 1rem;
+    color: var(--color-secondary);
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .about-text .bio {
+    font-size: 0.95rem;
+    color: var(--color-secondary);
+    line-height: 1.75;
+    margin-bottom: 18px;
+  }
+
+  /* ── Tags ── */
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  }
+  .tag-omics {
+    background: #ECFDF5;
+    color: var(--color-tag-omics);
+    border: 1px solid #A7F3D0;
+  }
+  .tag-drug {
+    background: #F5F3FF;
+    color: var(--color-tag-drug);
+    border: 1px solid #DDD6FE;
+  }
+  .tag-dl {
+    background: #EFF6FF;
+    color: var(--color-tag-dl);
+    border: 1px solid #BFDBFE;
+  }
+  .tag-icon {
+    width: 14px; height: 14px;
+    display: inline-block;
+    animation: tagPulse 2.5s ease-in-out infinite;
+  }
+  .tag:nth-child(2) .tag-icon { animation-delay: 0.4s; }
+  .tag:nth-child(3) .tag-icon { animation-delay: 0.8s; }
+
+  @keyframes tagPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.75; }
+  }
+
+  /* ── Projects ── */
+  .project-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 32px;
+    margin-bottom: 32px;
+    transition: box-shadow 0.25s, transform 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .project-card:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.07);
+    transform: translateY(-2px);
+  }
+  .project-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: var(--color-accent);
+    border-radius: 4px 0 0 4px;
+    transform: scaleY(0);
+    transition: transform 0.25s;
+    transform-origin: top;
+  }
+  .project-card:hover::before { transform: scaleY(1); }
+
+  .project-title {
+    font-family: var(--font-heading);
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin-bottom: 12px;
+    color: var(--color-primary);
+  }
+
+  /* Sub-project link — below project title */
+  .sub-project-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 18px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .sub-project-link:hover {
+    background: #DBEAFE;
+    transform: translateX(2px);
+  }
+  .sub-project-link .arrow {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+  }
+  .sub-project-link:hover .arrow {
+    transform: translateX(3px);
+  }
+
+  /* Project image — large, full-width */
+  .project-img {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    margin-bottom: 18px;
+  }
+  .project-img img {
+    width: 100%; height: auto;
+    display: block;
+  }
+
+  .project-desc {
+    font-size: 0.92rem;
+    color: var(--color-secondary);
+    line-height: 1.7;
+  }
+
+  /* ── Publication ── */
+  #publication { background: var(--color-surface); }
+
+  .pub-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .pub-item {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 20px 24px;
+    background: var(--color-background);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .pub-item:hover {
+    border-color: #CBD5E1;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .pub-number {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+  }
+  .pub-content {
+    font-size: 0.92rem;
+    color: var(--color-secondary);
+    line-height: 1.6;
+  }
+  .pub-content strong {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  .pub-role {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 10px;
+    background: #F0FDF4;
+    color: #166534;
+    margin-left: 6px;
+  }
+
+  /* ── Contact ── */
+  .contact-card {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 28px 32px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    max-width: 440px;
+    transition: box-shadow 0.25s;
+  }
+  .contact-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .contact-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: #EFF6FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .contact-icon svg {
+    width: 22px; height: 22px;
+    stroke: var(--color-accent);
+  }
+  .contact-info {
+    font-size: 0.95rem;
+    color: var(--color-secondary);
+  }
+  .contact-info a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+  .contact-info a:hover { color: var(--color-accent-hover); }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 24px;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    color: var(--color-secondary);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .about-grid {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 28px;
+    }
+    .about-image { width: 160px; height: 240px; }
+    .about-text h1 { font-size: 2rem; }
+    .tag-list { justify-content: center; }
+    .nav-links { gap: 16px; }
+    .nav-dropdown-menu { left: auto; right: 0; transform: translateY(4px); }
+    .nav-dropdown.open .nav-dropdown-menu { transform: translateY(8px); }
+    section { padding: 70px 0; }
+  }
+
+  @media (max-width: 480px) {
+    .nav-links { gap: 10px; }
+    .section-title { font-size: 1.4rem; }
+    .project-card { padding: 20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #particle-canvas { display: none; }
+    .tag-icon { animation: none; }
+    * { transition-duration: 0ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#about" class="nav-logo">Lingmin Zhan</a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li class="nav-dropdown">
+        <a class="nav-dropdown-trigger" data-dropdown-trigger>
+          Projects <span class="nav-arrow">▾</span>
+        </a>
+        <ul class="nav-dropdown-menu">
+          <li><a href="#proj-neovar" data-dropdown-link>NeoVariant</a></li>
+          <li><a href="#proj-neovaxfinder" data-dropdown-link>NeoVaxFinder</a></li>
+          <li><a href="#proj-transcriptionnet" data-dropdown-link>TranscriptionNet</a></li>
+        </ul>
+      </li>
+      <li><a href="#publication">Publication</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- About -->
+<section id="about">
+  <div class="container">
+    <div class="about-grid">
+      <div class="about-image">
+        <img src="element/About.jpg" alt="Lingmin Zhan">
+      </div>
+      <div class="about-text">
+        <h1>Lingmin Zhan</h1>
+        <p class="degree">Master's Degree</p>
+        <p class="bio">
+          Algorithm Engineer at the Hangzhou Institute of Medicine, Chinese Academy of Sciences.
+          Graduated from Shanxi Agricultural University with a major in Bioinformatics, where the research
+          focused on predicting transcriptional effects induced by gene or drug perturbations.
+          Current work primarily involves building a tumor vaccine discovery pipeline and developing
+          NGS variant detection algorithms.
+        </p>
+        <div class="tag-list">
+          <span class="tag tag-dl">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="20" cy="12" r="2"/><circle cx="12" cy="19" r="2"/><line x1="12" y1="7" x2="4" y2="10"/><line x1="12" y1="7" x2="20" y2="10"/><line x1="4" y1="14" x2="12" y2="17"/><line x1="20" y1="14" x2="12" y2="17"/></svg>
+            Deep Learning
+          </span>
+          <span class="tag tag-omics">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+            Multi-Omics
+          </span>
+          <span class="tag tag-drug">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="3"/><line x1="10" y1="10" x2="14" y2="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+            Drug Discovery
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Projects -->
+<section id="projects">
+  <div class="container">
+    <h2 class="section-title">Projects</h2>
+
+    <!-- NeoVariant -->
+    <div class="project-card" id="proj-neovar">
+      <h3 class="project-title">NeoVariant</h3>
+      <a href="ensemblevar.html" class="sub-project-link">
+        EnsembleVar — Sub-project <span class="arrow">&#8594;</span>
+      </a>
+      <div class="project-img">
+        <img src="element/Neovar.png" alt="NeoVariant" loading="lazy">
+      </div>
+      <p class="project-desc">
+        A deep network that fuses "spatial visual features" with "biological semantic information."
+        Conv2D layers extract local features from Pileup Tensors, while the DNA-RNA Cross-Attention
+        mechanism enables two-stage attention interaction. The model incorporates the Evo2 genomic
+        foundation model from Stanford, endowing it with "evolutionary intuition" to understand
+        genomic context grammar within a 221 bp window.
+      </p>
+    </div>
+
+    <!-- NeoVaxFinder -->
+    <div class="project-card" id="proj-neovaxfinder">
+      <h3 class="project-title">NeoVaxFinder</h3>
+      <a href="vcf2peptides.html" class="sub-project-link">
+        VCF2PEPTIDES — Sub-project <span class="arrow">&#8594;</span>
+      </a>
+      <div class="project-img">
+        <img src="element/NeoVaxFinder.png" alt="NeoVaxFinder" loading="lazy">
+      </div>
+      <p class="project-desc">
+        A lightweight, highly available, end-to-end neoantigen prediction pipeline.
+        Following the workflow of "data input — variant identification — neoantigen
+        prediction — hierarchical rule-based filtering," it takes common sequencing data
+        as input and outputs candidate epitopes suitable for vaccine design.
+        With a modular architecture, additional processing modules or evaluation
+        frameworks can be easily integrated in the future.
+      </p>
+    </div>
+
+    <!-- TranscriptionNet -->
+    <div class="project-card" id="proj-transcriptionnet">
+      <h3 class="project-title">TranscriptionNet</h3>
+      <div class="project-img">
+        <img src="element/TranscriptionNet.png" alt="TranscriptionNet" loading="lazy">
+      </div>
+      <p class="project-desc">
+        A deep learning model designed to systematically predict, on a genome-wide scale,
+        the transcriptional consequences induced by different gene perturbations. It leverages
+        transcriptional profiling data from the L1000 project—covering thousands of genes
+        across three perturbation types (RNAi, CRISPR, and overexpression)—and is trained
+        in conjunction with multi-layered functional gene networks.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Publication -->
+<section id="publication">
+  <div class="container">
+    <h2 class="section-title">Publication</h2>
+    <ul class="pub-list">
+      <li class="pub-item">
+        <span class="pub-number">1</span>
+        <span class="pub-content">
+          <strong>A genome-scale deep learning model to predict gene expression changes of genetic perturbations from multiplex biological networks.</strong>
+          <em>Briefings in Bioinformatics.</em>
+          <span class="pub-role">First Author</span>
+        </span>
+      </li>
+      <li class="pub-item">
+        <span class="pub-number">2</span>
+        <span class="pub-content">
+          <strong>A Natural Glucan from Black Bean Inhibits Cancer Cell Proliferation via PI3K-Akt and MAPK Pathway.</strong>
+          <em>Molecules.</em>
+          <span class="pub-role">Second Author</span>
+        </span>
+      </li>
+      <li class="pub-item">
+        <span class="pub-number">3</span>
+        <span class="pub-content">
+          <strong>Specific gene module pair-based target identification and drug discovery.</strong>
+          <em>Frontiers in Pharmacology.</em>
+          <span class="pub-role">Second Author</span>
+        </span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- Contact -->
+<section id="contact">
+  <div class="container">
+    <h2 class="section-title">Contact</h2>
+    <div class="contact-card">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M22 4L12 13 2 4"/>
+        </svg>
+      </div>
+      <div class="contact-info">
+        <a href="mailto:zhanlm52@163.com">zhanlm52@163.com</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  &copy; 2026 Lingmin Zhan — Hangzhou Institute of Medicine, Chinese Academy of Sciences
+</footer>
+
+<script>
+/* ── Nav dropdown ── */
+(function() {
+  const dropdown = document.querySelector('.nav-dropdown');
+  const trigger = dropdown.querySelector('[data-dropdown-trigger]');
+  const links = dropdown.querySelectorAll('[data-dropdown-link]');
+  let open = false;
+
+  trigger.addEventListener('click', function(e) {
+    e.preventDefault();
+    open = !open;
+    dropdown.classList.toggle('open', open);
+  });
+
+  links.forEach(function(link) {
+    link.addEventListener('click', function() {
+      open = false;
+      dropdown.classList.remove('open');
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!dropdown.contains(e.target)) {
+      open = false;
+      dropdown.classList.remove('open');
+    }
+  });
+})();
+
+/* ── Animated Canvas Background ── */
+(function() {
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+  const PARTICLE_COUNT = 50;
+
+  const shapes = ['dna', 'molecule', 'hexagon', 'neuron', 'circle'];
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  class Particle {
+    constructor() {
+      this.reset(true);
+    }
+    reset(init) {
+      this.x = init ? Math.random() * w : -60;
+      this.y = init ? Math.random() * h : Math.random() * h;
+      this.size = 14 + Math.random() * 22;
+      this.speedX = 0.15 + Math.random() * 0.35;
+      this.speedY = 0.08 + Math.random() * 0.2;
+      this.rotation = Math.random() * Math.PI * 2;
+      this.rotSpeed = (Math.random() - 0.5) * 0.008;
+      this.opacity = 0.36 + Math.random() * 0.44;
+      this.shape = shapes[Math.floor(Math.random() * shapes.length)];
+      this.color = ['#2563EB','#059669','#7C3AED','#D97706'][Math.floor(Math.random()*4)];
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+      this.rotation += this.rotSpeed;
+      if (this.y > h + 80) { this.y = -80; this.x = Math.random() * w; }
+      if (this.x > w + 80) { this.x = -80; }
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+      ctx.globalAlpha = this.opacity;
+      ctx.strokeStyle = this.color;
+      ctx.fillStyle = this.color;
+      ctx.lineWidth = 1.5;
+
+      const s = this.size;
+      switch (this.shape) {
+        case 'hexagon':
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const a = (Math.PI / 3) * i - Math.PI / 6;
+            const px = Math.cos(a) * s * 0.5;
+            const py = Math.sin(a) * s * 0.5;
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const a = (Math.PI / 3) * i - Math.PI / 6;
+            const px = Math.cos(a) * s * 0.25;
+            const py = Math.sin(a) * s * 0.25;
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
+          break;
+
+        case 'dna':
+          const waves = 3;
+          const amp = s * 0.18;
+          for (let wv = 0; wv < 2; wv++) {
+            ctx.beginPath();
+            for (let i = 0; i <= 30; i++) {
+              const t = i / 30;
+              const px = (t - 0.5) * s;
+              const py = Math.sin(t * Math.PI * waves + wv * Math.PI) * amp;
+              i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+          }
+          for (let i = 1; i < 6; i++) {
+            const t = i / 6;
+            const px = (t - 0.5) * s;
+            const y1 = Math.sin(t * Math.PI * waves) * amp;
+            const y2 = Math.sin(t * Math.PI * waves + Math.PI) * amp;
+            ctx.beginPath();
+            ctx.moveTo(px, y1);
+            ctx.lineTo(px, y2);
+            ctx.stroke();
+          }
+          break;
+
+        case 'molecule':
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.22, 0, Math.PI * 2);
+          ctx.stroke();
+          for (let i = 0; i < 4; i++) {
+            const a = (Math.PI / 2) * i;
+            const ex = Math.cos(a) * s * 0.5;
+            const ey = Math.sin(a) * s * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * s * 0.22, Math.sin(a) * s * 0.22);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(ex, ey, s * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          break;
+
+        case 'neuron':
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+          for (let i = 0; i < 6; i++) {
+            const a = (Math.PI / 3) * i;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * s * 0.15, Math.sin(a) * s * 0.15);
+            const mx = Math.cos(a) * s * 0.35;
+            const my = Math.sin(a) * s * 0.35;
+            ctx.lineTo(mx, my);
+            ctx.stroke();
+            for (let b = -1; b <= 1; b += 2) {
+              const ba = a + b * 0.45;
+              ctx.beginPath();
+              ctx.moveTo(mx, my);
+              ctx.lineTo(mx + Math.cos(ba) * s * 0.2, my + Math.sin(ba) * s * 0.2);
+              ctx.stroke();
+            }
+          }
+          break;
+
+        case 'circle':
+        default:
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.12, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+      }
+      ctx.restore();
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    for (const p of particles) {
+      p.update();
+      p.draw(ctx);
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+</script>
+
+</body>
+</html>
